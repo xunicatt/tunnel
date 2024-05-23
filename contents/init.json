@@ -1,0 +1,32 @@
+{
+    "project": {
+        "name": "",
+        "descprition": "",
+        "version": "1.0.0",
+        "package-url": "",
+        "build-executable": false,
+        "author": "",
+        "lang-descprition": {
+            "language": "cpp",
+            "compiler": "g++",
+            "flags": [
+                "-Wall",
+                "-Werror",
+                "-Wextra"
+            ]
+        }
+    },
+    "src": {
+        "main" : "main.cpp",
+        "includes": [
+            "include"
+        ],
+        "libs": [
+            ""
+        ],
+        "linker-flags": [
+            "-lm"
+        ]
+    },
+    "deps": []
+}

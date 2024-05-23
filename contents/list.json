@@ -1,0 +1,16 @@
+{
+    "pkgs": [
+        {
+            "pkg": "xunicatt/tunnel",
+            "version": ["1.0.0"]
+        },
+        {
+            "pkg": "xunicatt/tunnel-test1",
+            "version": ["1.0.0"]
+        },
+        {
+            "pkg": "xunicatt/tunnel-test2",
+            "version": ["0.0.3"]
+        }
+    ]
+}
