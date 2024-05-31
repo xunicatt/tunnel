@@ -8,8 +8,9 @@ const (
 	TUNNEL_MIN_VER   = 0
 	TUNNEL_PATCH_VER = 1
 
-	TUNNEL_DEF_PATH  = ".tunnel"
-	TUNNEL_INIT_FILE = "init.json"
+	TUNNEL_DEF_PATH   = ".tunnel"
+	TUNNEL_CACHE_PATH = "cache"
+	TUNNEL_INIT_FILE  = "init.json"
 )
 
 var (

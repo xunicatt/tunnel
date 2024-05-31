@@ -18,7 +18,7 @@ install: tunnel
 	mkdir -p $(install_dir)
 	mkdir -p $(install_dir)/bin $(install_dir)/pkg $(install_dir)/cache 
 	cp ./$(project) $(install_dir)/bin
-	cp -u ./contents/init.json $(install_dir)
+	cp ./contents/init.json $(install_dir)
 	-cp -n ./contents/list.json $(install_dir)
 	-rm ./$(project)
 	@echo

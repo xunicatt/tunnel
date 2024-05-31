@@ -4,9 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
+	"strings"
 	shared "tunnel/src"
 	"tunnel/src/types"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 const (
@@ -24,12 +29,43 @@ const (
 		"\t-r, remove <package-name>       Removes a package from cache.\n" +
 		"\t-b, build                       Builds current project and creates an executable.\n" +
 		"\t-r, run                         Runs current project.\n\n"
+
+	GIT_LATEST_LINK_1 = "https://api.github.com/repos/"
+	GIT_LATEST_LINK_2 = "/releases/latest"
+	GIT_VER_LINK_1    = "https://github.com/"
+	GIT_VER_LINK_2    = "/archive/"
 )
 
 type CmdArgs struct {
 	Argc  int
 	Index int
 	Argv  *[]string
+}
+
+func download(url string, headers *[2][]string, descp string, file *os.File) (err error) {
+	resp, err := fetch(url, headers)
+	if err != nil {
+		return
+	}
+
+	bar := progressbar.DefaultBytes(resp.ContentLength, descp)
+	_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
+	resp.Body.Close()
+	return
+}
+
+func fetch(url string, headers *[2][]string) (resp *http.Response, err error) {
+	req, err := http.NewRequest("GET", url, nil)
+
+	if err != nil {
+		return
+	}
+
+	for _, item := range headers {
+		req.Header.Set(item[0], item[1])
+	}
+
+	return http.DefaultClient.Do(req)
 }
 
 func cmdInit(cmdArgs *CmdArgs) (err error) {
@@ -97,11 +133,87 @@ func cmdInit(cmdArgs *CmdArgs) (err error) {
 	return
 }
 
+func cmdInstall(cmdArgs *CmdArgs) (err error) {
+	if cmdArgs.Index+1 >= cmdArgs.Argc {
+		return errors.New("needs <package-name> for option 'install'")
+	}
+
+	cmdArgs.Index++
+
+	for cmdArgs.Index < cmdArgs.Argc {
+		pkgName := (*cmdArgs.Argv)[cmdArgs.Index]
+		atIndex := strings.LastIndexByte(pkgName, '@')
+		headers := [2][]string{
+			{"User-Agent", "tunnel"},
+			{"Accept", "application/json"},
+		}
+		url := ""
+		pkgFileName := ""
+
+		if atIndex == -1 {
+			jsonResp, err := fetch(
+				GIT_LATEST_LINK_1+pkgName+GIT_LATEST_LINK_2,
+				&headers,
+			)
+
+			if err != nil {
+				return errors.New(err.Error() + ": failed to fetch")
+			}
+
+			defer jsonResp.Body.Close()
+
+			if jsonResp.StatusCode != 200 {
+				return errors.New("no package '" + pkgName + "' found")
+			}
+
+			respBytes, err := io.ReadAll(jsonResp.Body)
+			if err != nil {
+				return errors.New(err.Error() + ": failed to read 'json' body")
+			}
+
+			jsonBody := make(map[string]interface{})
+			err = json.Unmarshal(respBytes, &jsonBody)
+			if err != nil {
+				return errors.New(err.Error() + ": failed to unmarshal 'json'")
+			}
+
+			url = jsonBody["zipball_url"].(string)
+			pkgFileName = strings.Replace(pkgName, "/", "_", 1)
+		} else {
+			strArr := strings.Split(pkgName, "@")
+			pkgFileName = strArr[0]
+			pkgVer := strArr[1]
+
+			url = GIT_VER_LINK_1 + pkgFileName + GIT_VER_LINK_2 + pkgVer + ".zip"
+			pkgFileName = strings.Replace(pkgFileName, "/", "_", 1)
+		}
+
+		file, err := os.Create(
+			shared.UserHomeDir + "/" + shared.TUNNEL_DEF_PATH + "/" +
+				shared.TUNNEL_CACHE_PATH + "/" + pkgFileName + ".zip")
+
+		if err != nil {
+			return errors.New(err.Error() + ": failed to create a file")
+		}
+
+		defer file.Close()
+
+		err = download(url, &headers, "downloading: "+pkgName, file)
+		if err != nil {
+			return errors.New(err.Error() + ": failed to fetch 'zip' file")
+		}
+
+		cmdArgs.Index++
+	}
+
+	return
+}
+
 func Start(cmdArgs *CmdArgs) (err error) {
 	for cmdArgs.Index < cmdArgs.Argc {
-		arg := (*cmdArgs.Argv)[cmdArgs.Index]
+		arg := &(*cmdArgs.Argv)[cmdArgs.Index]
 
-		switch arg {
+		switch *arg {
 		case "help":
 			fmt.Fprintf(os.Stdout, "%s\n", HELP_PROMPT)
 			return
@@ -112,7 +224,12 @@ func Start(cmdArgs *CmdArgs) (err error) {
 
 		case "init":
 			return cmdInit(cmdArgs)
+
+		case "install":
+			return cmdInstall(cmdArgs)
 		}
+
+		cmdArgs.Index++
 	}
 
 	return
