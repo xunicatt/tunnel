@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"os"
+	"path/filepath"
 	shared "tunnel/src"
 	"tunnel/src/logerr"
 )
@@ -27,7 +28,7 @@ func setWorkingDir() {
 }
 
 func getFileExists() {
-	_, err := os.Stat(shared.WorkingDir + "/" + shared.TUNNEL_FILE)
+	_, err := os.Stat(filepath.Join(shared.WorkingDir, shared.TUNNEL_FILE))
 	shared.FileExists = (err == nil)
 }
 

@@ -7,9 +7,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	shared "tunnel/src"
 	"tunnel/src/types"
+	"tunnel/src/zippy"
 
 	"github.com/schollz/progressbar/v3"
 )
@@ -51,6 +53,7 @@ func download(url string, headers *[2][]string, descp string, file *os.File) (er
 	bar := progressbar.DefaultBytes(resp.ContentLength, descp)
 	_, err = io.Copy(io.MultiWriter(file, bar), resp.Body)
 	resp.Body.Close()
+	fmt.Println()
 	return
 }
 
@@ -79,7 +82,7 @@ func cmdInit(cmdArgs *CmdArgs) (err error) {
 
 	cmdArgs.Index++
 	//'init.json'
-	initFile := shared.UserHomeDir + "/" + shared.TUNNEL_DEF_PATH + "/" + shared.TUNNEL_INIT_FILE
+	initFile := filepath.Join(shared.UserHomeDir, shared.TUNNEL_DEF_PATH, shared.TUNNEL_INIT_FILE)
 	projectName := (*cmdArgs.Argv)[cmdArgs.Index]
 	isLangC := false
 
@@ -117,7 +120,7 @@ func cmdInit(cmdArgs *CmdArgs) (err error) {
 	}
 
 	//current_working_dir/tunnel.json
-	filePath := shared.WorkingDir + "/" + shared.TUNNEL_FILE
+	filePath := filepath.Join(shared.WorkingDir, shared.TUNNEL_FILE)
 	file, err := os.Create(filePath)
 	if err != nil {
 		return errors.New("failed to create file '" + filePath + "'")
@@ -130,6 +133,20 @@ func cmdInit(cmdArgs *CmdArgs) (err error) {
 		return errors.New("failed to write to the file '" + filePath + "'")
 	}
 
+	return
+}
+
+func installFromCache(filePath, pkgName, pkgVer string) (err error) {
+	installPath := filepath.Join(
+		shared.UserHomeDir,
+		shared.TUNNEL_DEF_PATH,
+		shared.TUNNEL_CACHE_PATH,
+		shared.TUNNEL_PKG_PATH,
+		pkgName,
+		pkgVer,
+	)
+
+	err = zippy.Unzip(filePath, installPath)
 	return
 }
 
@@ -147,8 +164,11 @@ func cmdInstall(cmdArgs *CmdArgs) (err error) {
 			{"User-Agent", "tunnel"},
 			{"Accept", "application/json"},
 		}
+
 		url := ""
 		pkgFileName := ""
+		pkgVer := ""
+		defaultPkgName := pkgName
 
 		if atIndex == -1 {
 			jsonResp, err := fetch(
@@ -182,15 +202,20 @@ func cmdInstall(cmdArgs *CmdArgs) (err error) {
 		} else {
 			strArr := strings.Split(pkgName, "@")
 			pkgFileName = strArr[0]
-			pkgVer := strArr[1]
+			defaultPkgName = strArr[0]
+			pkgVer = strArr[1]
 
 			url = GIT_VER_LINK_1 + pkgFileName + GIT_VER_LINK_2 + pkgVer + ".zip"
 			pkgFileName = strings.Replace(pkgFileName, "/", "_", 1)
 		}
 
-		file, err := os.Create(
-			shared.UserHomeDir + "/" + shared.TUNNEL_DEF_PATH + "/" +
-				shared.TUNNEL_CACHE_PATH + "/" + pkgFileName + ".zip")
+		filePath := filepath.Join(
+			shared.UserHomeDir,
+			shared.TUNNEL_DEF_PATH,
+			shared.TUNNEL_CACHE_PATH,
+			pkgFileName+".zip",
+		)
+		file, err := os.Create(filePath)
 
 		if err != nil {
 			return errors.New(err.Error() + ": failed to create a file")
@@ -201,6 +226,11 @@ func cmdInstall(cmdArgs *CmdArgs) (err error) {
 		err = download(url, &headers, "downloading: "+pkgName, file)
 		if err != nil {
 			return errors.New(err.Error() + ": failed to fetch 'zip' file")
+		}
+
+		err = installFromCache(filePath, defaultPkgName, pkgVer)
+		if err != nil {
+			return errors.New(err.Error() + ": failed to unzip")
 		}
 
 		cmdArgs.Index++
