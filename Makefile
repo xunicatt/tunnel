@@ -16,7 +16,7 @@ clean:
 
 install: tunnel
 	mkdir -p $(install_dir)
-	mkdir -p $(install_dir)/bin $(install_dir)/pkg $(install_dir)/cache 
+	mkdir -p $(install_dir)/bin $(install_dir)/pkg $(install_dir)/cache $(install_dir)/lib
 	cp ./$(project) $(install_dir)/bin
 	cp ./contents/init.json $(install_dir)
 	-cp -n ./contents/list.json $(install_dir)

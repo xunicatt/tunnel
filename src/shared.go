@@ -12,6 +12,7 @@ const (
 	TUNNEL_DEF_PATH   = ".tunnel"
 	TUNNEL_CACHE_PATH = "cache"
 	TUNNEL_PKG_PATH   = "pkg"
+	TUNNEL_LIB_PATH   = "lib"
 	TUNNEL_INIT_FILE  = "init.json"
 )
 

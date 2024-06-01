@@ -38,16 +38,11 @@ func unzipFile(rootDir string, file *zip.File, dest string) (err error) {
 	return
 }
 
-func Unzip(src, dest string) (err error) {
-	r, err := zip.OpenReader(src)
-	if err != nil {
-		return
-	}
+func Unzip(zf *[]*zip.File, dest string) (err error) {
+	rootDir := (*zf)[0].Name
 
-	defer r.Close()
-	mainDir := r.File[0].Name
-	for _, file := range r.File {
-		unzipFile(mainDir, file, dest)
+	for _, file := range *zf {
+		unzipFile(rootDir, file, dest)
 	}
 
 	return
